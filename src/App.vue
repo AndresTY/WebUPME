@@ -1,6 +1,6 @@
 <template>
   <img alt="UPME Logo" src="./assets/Logo_upme_nw.png">
-  <CardBox msg="PQRS Beta 1.0" />
+  <CardBox msg="" />
 </template>
 
 <script lang="ts">
