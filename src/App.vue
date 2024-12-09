@@ -1,16 +1,16 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js + TypeScript App"/>
+  <img alt="UPME Logo" src="./assets/Logo_upme_nw.png">
+  <CardBox msg="PQRS Beta 1.0" />
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import HelloWorld from './components/HelloWorld.vue';
+import CardBox from './components/CardBox.vue';
 
 export default defineComponent({
   name: 'App',
   components: {
-    HelloWorld
+    CardBox
   }
 });
 </script>
@@ -23,5 +23,10 @@ export default defineComponent({
   text-align: center;
   color: #2c3e50;
   margin-top: 60px;
+}
+
+img {
+  width: 10%;
+  height: auto;
 }
 </style>
