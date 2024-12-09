@@ -47,7 +47,7 @@ const isError = ref<boolean>(false);
 
 const handleQuestion = async (pqrs: string) => {
     try {
-        const rawResponse = await fetch('http://192.168.1.59:8000', {
+        const rawResponse = await fetch('/api', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
