@@ -7,7 +7,7 @@
                 <div class="underline"></div>
             </div>
             <br>
-            <button @click="handleQuestion()">
+            <button @click="handleQuestion()" :disabled="isLoading">
                 <div class="svg-wrapper-1">
                     <div class="svg-wrapper">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
@@ -27,39 +27,51 @@
                 <div class="tags">
                     <span :class="['tag', { 'error': isError }]">Respuesta</span>
                 </div>
+                <section class="dots-container" v-if="isLoading">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </section>
                 <p v-if="errorMessage">{{ errorMessage }}</p>
-                <p v-else-if="response">{{ response }}</p>
+                <p v-else-if="response" v-html="response"></p>
                 <p v-else></p>
             </div>
         </section>
     </div>
-
 </template>
 
 <script lang="ts" setup>
 import { Ref, ref } from 'vue'
+import { marked } from 'marked'
 
 let question: Ref<string> = ref('')
 let response: Ref<string> = ref<string | object | null>(null)
 
 const errorMessage = ref<string>('');
 const isError = ref<boolean>(false);
+const isLoading = ref<boolean>(false);
 
-const handleQuestion = async (pqrs: string) => {
+const handleQuestion = async () => {
+    isLoading.value = true;
+    response.value = "";
+
     try {
-        const rawResponse = await fetch('/api', {
+        const rawResponse = await fetch('/api/ask', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
             },
-            body: JSON.stringify({ qa: pqrs, k: 7 }),
+            body: JSON.stringify({ qa: question.value, k: 7 }),
         });
 
         if (rawResponse.status === 400) {
             const errorData = await rawResponse.json();
             errorMessage.value = errorData.message || 'Error 400: Solicitud incorrecta';
             isError.value = true;
+            isLoading.value = false;
             return;
         }
 
@@ -68,16 +80,22 @@ const handleQuestion = async (pqrs: string) => {
         }
 
         const res = await rawResponse.json();
-        response.value = res;
+        const markdownText = res.predict;
+        const htmlContent = marked(markdownText);
+
+        response.value = htmlContent;
         isError.value = false;
         errorMessage.value = '';
     } catch (error) {
         console.error('Error en la solicitud:', error);
         errorMessage.value = 'Ocurrió un error inesperado';
         isError.value = true;
+    } finally {
+        isLoading.value = false;
     }
 };
 </script>
+
 
 <style scoped>
 .container {
@@ -233,5 +251,59 @@ button:active {
 .input-container input[type="text"]:focus~.underline,
 .input-container input[type="text"]:valid~.underline {
     transform: scaleX(1);
+}
+
+/* From Uiverse.io by adamgiebl */
+.dots-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+}
+
+.dot {
+    height: 20px;
+    width: 20px;
+    margin-right: 10px;
+    border-radius: 10px;
+    background-color: #b3d4fc;
+    animation: pulse 1.5s infinite ease-in-out;
+}
+
+.dot:last-child {
+    margin-right: 0;
+}
+
+.dot:nth-child(1) {
+    animation-delay: -0.3s;
+}
+
+.dot:nth-child(2) {
+    animation-delay: -0.1s;
+}
+
+.dot:nth-child(3) {
+    animation-delay: 0.1s;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.8);
+        background-color: #b3d4fc;
+        box-shadow: 0 0 0 0 rgba(178, 212, 252, 0.7);
+    }
+
+    50% {
+        transform: scale(1.2);
+        background-color: #6793fb;
+        box-shadow: 0 0 0 10px rgba(178, 212, 252, 0);
+    }
+
+    100% {
+        transform: scale(0.8);
+        background-color: #b3d4fc;
+        box-shadow: 0 0 0 0 rgba(178, 212, 252, 0.7);
+    }
 }
 </style>
