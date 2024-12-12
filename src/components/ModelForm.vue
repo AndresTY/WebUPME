@@ -22,7 +22,7 @@
             </button>
         </section>
 
-        <section class="ResponseSection">
+        <section class="ResponseSection" ref="responseSection">
             <div class="task">
                 <div class="tags">
                     <span :class="['tag', { 'error': isError }]">Respuesta</span>
@@ -38,6 +38,51 @@
                 <p v-else-if="response" v-html="response"></p>
                 <p v-else></p>
             </div>
+            <div class="export-buttons">
+                <div class="button" @click="downloadSection('PDF')">
+                    <div class="button-wrapper">
+                        <div class="text">PDF</div>
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" width="2em"
+                                height="2em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24">
+                                <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 0 0 4.561 21h14.878a2 2 0 0 0 1.94-1.515L22 17">
+                                </path>
+                            </svg>
+                        </span>
+                    </div>
+                </div>
+                <div class="button" @click="downloadSection('HTML')">
+                    <div class="button-wrapper">
+                        <div class="text">HTML</div>
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" width="2em"
+                                height="2em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24">
+                                <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 0 0 4.561 21h14.878a2 2 0 0 0 1.94-1.515L22 17">
+                                </path>
+                            </svg>
+                        </span>
+                    </div>
+                </div>
+                <div class="button" @click="downloadSection('DOCX')">
+                    <div class="button-wrapper">
+                        <div class="text">DOCX</div>
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" width="2em"
+                                height="2em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24">
+                                <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 0 0 4.561 21h14.878a2 2 0 0 0 1.94-1.515L22 17">
+                                </path>
+                            </svg>
+                        </span>
+                    </div>
+                </div>
+
+            </div>
         </section>
     </div>
 </template>
@@ -45,6 +90,8 @@
 <script lang="ts" setup>
 import { Ref, ref } from 'vue'
 import { marked } from 'marked'
+import html2pdf from 'html2pdf.js'
+import { saveAs } from 'file-saver'
 
 let question: Ref<string> = ref('')
 let response: Ref<string> = ref<string | object | null>(null)
@@ -94,6 +141,64 @@ const handleQuestion = async () => {
         isLoading.value = false;
     }
 };
+
+const downloadSection = (file: string) => {
+    // Capturar el contenido HTML de la sección usando $refs
+    const sectionContent = response.value;
+    if (sectionContent === null) {
+        return;
+    }
+    if (file === "PDF") {
+        const opt = {
+            margin: [10, 10, 10, 10],
+            filename: 'Respuesta.pdf',
+            image: {
+                type: 'jpeg',
+                quality: 0.98
+            },
+            html2canvas: {
+                scale: 1,
+                useCORS: true,
+                logging: false,
+                allowTaint: true
+            },
+            jsPDF: {
+                unit: 'mm',
+                format: 'a4',
+                orientation: 'portrait'
+            },
+        }
+
+        html2pdf().set(opt).from(sectionContent).save()
+    }
+    if (file === "HTML") {
+
+        const blob = new Blob([sectionContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Respuesta.html';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+    if (file === "DOCX") {
+        const htmlContent = sectionContent
+        const converted = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+            xmlns:w='urn:schemas-microsoft-com:office:word' 
+            xmlns='http://www.w3.org/TR/REC-html40'>
+      <head><meta charset='utf-8'></head>
+      <body>${htmlContent}</body>
+      </html>
+    `
+
+        const blob = new Blob(['\ufeff', converted], {
+            type: 'application/msword'
+        })
+
+        saveAs(blob, `Respuesta_${new Date().toISOString().slice(0, 10)}.doc`)
+    }
+}
 </script>
 
 
@@ -107,7 +212,136 @@ const handleQuestion = async () => {
 .QuestionSection,
 .ResponseSection {
     flex: 1;
+    flex-direction: column;
+    align-items: center;
 }
+
+.export-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+    padding: 1rem;
+    max-width: 500px;
+
+}
+
+/* From Uiverse.io by satyamchaudharydev */
+.button {
+    --width: 100px;
+    --height: 35px;
+    --tooltip-height: 35px;
+    --tooltip-width: 90px;
+    --gap-between-tooltip-to-button: 18px;
+    --button-color: #1163ff;
+    --tooltip-color: #fff;
+    width: var(--width);
+    height: var(--height);
+    background: var(--button-color);
+    position: relative;
+    text-align: center;
+    border-radius: 0.45em;
+    font-family: "Arial";
+    transition: background 0.3s;
+}
+
+.button::before {
+    position: absolute;
+    content: attr(data-tooltip);
+    width: var(--tooltip-width);
+    height: var(--tooltip-height);
+    background-color: var(--tooltip-color);
+    font-size: 0.9rem;
+    color: #111;
+    border-radius: .25em;
+    line-height: var(--tooltip-height);
+    bottom: calc(var(--height) + var(--gap-between-tooltip-to-button) + 10px);
+    left: calc(50% - var(--tooltip-width) / 2);
+}
+
+.button::after {
+    position: absolute;
+    content: '';
+    width: 0;
+    height: 0;
+    border: 10px solid transparent;
+    border-top-color: var(--tooltip-color);
+    left: calc(50% - 10px);
+    bottom: calc(100% + var(--gap-between-tooltip-to-button) - 10px);
+}
+
+.button::after,
+.button::before {
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.5s;
+}
+
+.text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.button-wrapper,
+.text,
+.icon {
+    overflow: hidden;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    color: #fff;
+}
+
+.text {
+    top: 0
+}
+
+.text,
+.icon {
+    transition: top 0.5s;
+}
+
+.icon {
+    color: #fff;
+    top: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+.button:hover {
+    background: #6c18ff;
+}
+
+.button:hover .text {
+    top: -100%;
+}
+
+.button:hover .icon {
+    top: 0;
+}
+
+.button:hover:before,
+.button:hover:after {
+    opacity: 1;
+    visibility: visible;
+}
+
+.button:hover:after {
+    bottom: calc(var(--height) + var(--gap-between-tooltip-to-button) - 20px);
+}
+
+.button:hover:before {
+    bottom: calc(var(--height) + var(--gap-between-tooltip-to-button));
+}
+
 
 .task {
     position: relative;
