@@ -20,6 +20,31 @@
                 </div>
                 <span>Enviar</span>
             </button>
+            <br>
+            <section style="padding: 10%;">
+                <div class="container-input">
+                    <input type="file" name="file-1" id="file-1" class="inputfile inputfile-1" accept=".pdf"
+                        @change="handleFileUpload">
+                    <label for="file-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="iborrainputfile" width="20" height="17"
+                            viewBox="0 0 20 17">
+                            <path
+                                d="M10 0l-5.2 4.9h3.3v5.1h3.8v-5.1h3.3l-5.2-4.9zm9.3 11.5l-3.2-2.1h-2l3.4 2.6h-3.5c-.1 0-.2.1-.2.1l-.8 2.3h-6l-.8-2.2c-.1-.1-.1-.2-.2-.2h-3.6l3.4-2.6h-2l-3.2 2.1c-.4.3-.7 1-.6 1.5l.6 3.1c.1.5.7.9 1.2.9h16.3c.6 0 1.1-.4 1.3-.9l.6-3.1c.1-.5-.2-1.2-.7-1.5z">
+                            </path>
+                        </svg>
+                        <span class="iborrainputfile">Seleccionar archivo</span>
+                    </label>
+                </div>
+                <div>
+                    <button @click="submitPDF" :disabled="!pdfFile || isLoading2">
+                        {{ isLoading2 ? 'Enviando...' : 'Enviar PDF' }}
+                    </button>
+
+                    <div v-if="responseMessage" class="message">
+                        {{ responseMessage }}
+                    </div>
+                </div>
+            </section>
         </section>
 
         <section class="ResponseSection" ref="responseSection">
@@ -96,6 +121,10 @@ import { saveAs } from 'file-saver'
 let question: Ref<string> = ref('')
 let response: Ref<string> = ref<string | object | null>(null)
 
+const pdfFile = ref<File | null>(null)
+const isLoading2 = ref(false)
+const responseMessage = ref('')
+
 const errorMessage = ref<string>('');
 const isError = ref<boolean>(false);
 const isLoading = ref<boolean>(false);
@@ -141,6 +170,84 @@ const handleQuestion = async () => {
         isLoading.value = false;
     }
 };
+
+const handleFileUpload = (event: Event) => {
+    const input = event.target as HTMLInputElement
+    if (input.files && input.files.length > 0) {
+        const file = input.files[0]
+
+        // Validar que sea un archivo PDF
+        if (file.type === 'application/pdf') {
+            // Validar tamaño del archivo (opcional, ejemplo: máximo 10MB)
+            const maxSize = 10 * 1024 * 1024 // 10MB
+            if (file.size > maxSize) {
+                responseMessage.value = 'El archivo es demasiado grande. Máximo 10MB.'
+                pdfFile.value = null
+                return
+            }
+
+            pdfFile.value = file
+            responseMessage.value = '' // Limpiar mensaje anterior
+        } else {
+            responseMessage.value = 'Por favor, selecciona un archivo PDF válido.'
+            pdfFile.value = null
+        }
+    }
+}
+
+const submitPDF = async () => {
+    // Validar que se haya seleccionado un archivo
+    if (!pdfFile.value) {
+        responseMessage.value = 'Por favor, selecciona un archivo PDF primero.'
+        return
+    }
+
+    // Configurar el estado de carga
+    isLoading2.value = true
+    responseMessage.value = ''
+
+    try {
+        // Crear FormData para enviar el archivo
+        const formData = new FormData()
+        formData.append('file', pdfFile.value)
+
+        // Realizar la solicitud a la API
+        const response = await fetch('/api/loadPdf', {
+            method: 'POST',
+            body: formData
+        })
+
+        const responseText = await response.text()
+
+        if (response.ok) {
+            let result;
+            try {
+                result = JSON.parse(responseText)
+            } catch {
+                result = responseText
+            }
+
+            responseMessage.value = result.message
+            console.log('Respuesta de la API:', result)
+        } else {
+            if (response.status === 422) {
+                responseMessage.value = `Error 422: Datos no procesables. Detalles: ${responseText}`
+                console.error('Error 422 detalles:', responseText)
+            } else {
+                responseMessage.value = `Error ${response.status}: ${response.statusText}`
+            }
+
+            // Log de depuración
+            console.error('Cuerpo de la respuesta de error:', responseText)
+        }
+    } catch (error) {
+        console.error('Error de red o inesperado:', error)
+        responseMessage.value = 'Ocurrió un error al enviar el PDF. Compruebe su conexión.'
+    } finally {
+        // Restaurar el estado de carga
+        isLoading2.value = false
+    }
+}
 
 const downloadSection = (file: string) => {
     // Capturar el contenido HTML de la sección usando $refs
@@ -226,7 +333,58 @@ const downloadSection = (file: string) => {
 
 }
 
-/* From Uiverse.io by satyamchaudharydev */
+.container-input {
+    text-align: center;
+}
+
+.inputfile {
+    width: 0.1px;
+    height: 0.1px;
+    opacity: 0;
+    overflow: hidden;
+    position: absolute;
+    z-index: -1;
+}
+
+.inputfile+label {
+    max-width: 80%;
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+    display: inline-block;
+    overflow: hidden;
+    padding: 0.625rem 1.25rem;
+}
+
+.inputfile+label svg {
+    width: 1em;
+    height: 1em;
+    vertical-align: middle;
+    fill: currentColor;
+    margin-top: -0.25em;
+    margin-right: 0.25em;
+}
+
+.iborrainputfile {
+    font-size: 16px;
+    font-weight: normal;
+    font-family: 'Lato';
+}
+
+.inputfile-1+label {
+    color: #828282;
+    background-color: #fff;
+}
+
+.inputfile-1:focus+label,
+.inputfile-1.has-focus+label,
+.inputfile-1+label:hover {
+    background-color: #fff;
+    color: #000;
+}
+
 .button {
     --width: 100px;
     --height: 35px;
